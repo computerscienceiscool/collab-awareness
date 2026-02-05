@@ -124,7 +124,7 @@ const client = new AwarenessClient(url, {
   name: 'Display Name',       // Default: 'User'
   color: '#FF6B6B',           // Default: '#000000'
   documentId: 'doc-id',       // For grouping users (default: 'default')
-  heartbeatInterval: 30000,   // Heartbeat frequency (ms)
+  heartbeatInterval: 5000,    // Heartbeat frequency (ms)
   reconnectDelay: 1000,       // Initial reconnect delay (ms)
   maxReconnectDelay: 30000    // Max reconnect delay (ms)
 });
@@ -297,6 +297,15 @@ npx serve examples
 
 # Open http://localhost:3000/browser-demo.html in multiple browser tabs
 ```
+
+## Related Projects
+
+This package is used by:
+
+- [collab-editor](https://github.com/computerscienceiscool/collab-editor) - Browser-based collaborative text editor
+- [vimbeam](https://github.com/computerscienceiscool/vimbeam) - Neovim plugin for collaborative editing
+
+Together, these allow real-time collaboration between browser and Neovim users.
 
 ## License
 
