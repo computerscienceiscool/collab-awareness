@@ -309,7 +309,8 @@ export class AwarenessClient {
   }
 
   _handleMessage(data) {
-    if (data.type === 'awareness' && data.clientID !== this.userId) {
+    // Filter by documentId to prevent cross-document user bleed
+    if (data.type === 'awareness' && data.clientID !== this.userId && data.documentId === this.documentId) {
       this._remoteStates.set(data.clientID, data.state);
       this._lastSeen.set(data.clientID, Date.now());
 
