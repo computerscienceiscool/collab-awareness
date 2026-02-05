@@ -47,7 +47,7 @@ export class AwarenessClient {
       selection: null
     };
 
-    this.heartbeatInterval = options.heartbeatInterval || 30000;
+    this.heartbeatInterval = options.heartbeatInterval || 5000;
     this.reconnectDelay = options.reconnectDelay || 1000;
     this.maxReconnectDelay = options.maxReconnectDelay || 30000;
 
@@ -205,6 +205,16 @@ export class AwarenessClient {
    */
   setColor(color) {
     this.state.user.color = color;
+    this._broadcastState();
+    this._notifyChange();
+  }
+
+  /**
+   * Set document ID (for switching documents)
+   * @param {string} documentId - Document/room ID
+   */
+  setDocumentId(documentId) {
+    this.documentId = documentId || 'default';
     this._broadcastState();
     this._notifyChange();
   }
