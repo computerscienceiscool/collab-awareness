@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>@collab-editor/awareness Demo</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+
+    h1 {
+      color: #333;
+    }
+
+    .card {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .status {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .status.connected {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .status.disconnected {
+      background: #f8d7da;
+      color: #721c24;
+    }
+
+    .user-settings {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    .user-settings input[type="text"] {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    .user-settings input[type="color"] {
+      width: 50px;
+      height: 36px;
+      border: none;
+      cursor: pointer;
+    }
+
+    #user-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .user {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      color: white;
+    }
+
+    #typing-indicator {
+      font-style: italic;
+      color: #666;
+      min-height: 1.4em;
+      margin-top: 10px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 200px;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 14px;
+      resize: vertical;
+    }
+
+    .cursor-info {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #666;
+    }
+
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    button:hover {
+      background: #0056b3;
+    }
+
+    button.disconnect {
+      background: #dc3545;
+    }
+
+    button.disconnect:hover {
+      background: #c82333;
+    }
+
+    .event-log {
+      height: 150px;
+      overflow-y: auto;
+      background: #1e1e1e;
+      color: #d4d4d4;
+      font-family: monospace;
+      font-size: 11px;
+      padding: 10px;
+      border-radius: 4px;
+    }
+
+    .event-log .event {
+      margin-bottom: 4px;
+    }
+
+    .event-log .time {
+      color: #6a9955;
+    }
+
+    .event-log .type {
+      color: #569cd6;
+    }
+  </style>
+</head>
+<body>
+  <h1>@collab-editor/awareness Demo</h1>
+
+  <div class="card">
+    <h3>Connection</h3>
+    <p>
+      Status: <span id="connection-status" class="status disconnected">Disconnected</span>
+    </p>
+    <p>
+      <button id="connect-btn">Connect</button>
+      <button id="disconnect-btn" class="disconnect" disabled>Disconnect</button>
+    </p>
+  </div>
+
+  <div class="card">
+    <h3>User Settings</h3>
+    <div class="user-settings">
+      <input type="text" id="name-input" placeholder="Your name" value="Demo User">
+      <input type="color" id="color-input" value="#4ECDC4">
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Users Online</h3>
+    <div>Count: <strong id="user-count">0</strong></div>
+    <div id="user-list"></div>
+    <div id="typing-indicator"></div>
+  </div>
+
+  <div class="card">
+    <h3>Editor (type here to broadcast cursor)</h3>
+    <textarea id="editor" placeholder="Type something..."></textarea>
+    <div class="cursor-info">
+      Cursor position: <span id="cursor-pos">0</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Event Log</h3>
+    <div id="event-log" class="event-log"></div>
+  </div>
+
+  <script type="module">
+    // In a real project, you'd import from the package:
+    // import { AwarenessClient, createUserList, createTypingIndicator } from '@collab-editor/awareness';
+
+    // For this demo, we inline a simplified version:
+    class AwarenessClient {
+      constructor(url, options = {}) {
+        this.url = url;
+        this.userId = options.userId || crypto.randomUUID();
+        this.documentId = options.documentId || 'demo';
+        this.state = {
+          user: { name: options.name || 'User', color: options.color || '#000000' },
+          typing: false,
+          selection: null
+        };
+        this._ws = null;
+        this._remoteStates = new Map();
+        this._listeners = new Map();
+        this._heartbeatTimer = null;
+      }
+
+      connect() {
+        if (this._ws) return;
+        this._ws = new WebSocket(this.url);
+
+        this._ws.onopen = () => {
+          this._send({ type: 'join', documentId: this.documentId, clientID: this.userId });
+          this._broadcastState();
+          this._startHeartbeat();
+          this._emit('connected');
+        };
+
+        this._ws.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          if (data.type === 'awareness' && data.clientID !== this.userId) {
+            this._remoteStates.set(data.clientID, data.state);
+            this._emit('cursor', { userId: data.clientID, ...data.state });
+            this._emit('change', this.getStates());
+          }
+        };
+
+        this._ws.onclose = () => {
+          clearInterval(this._heartbeatTimer);
+          this._ws = null;
+          this._emit('disconnected');
+        };
+
+        this._ws.onerror = (e) => this._emit('error', e);
+      }
+
+      disconnect() {
+        clearInterval(this._heartbeatTimer);
+        if (this._ws) {
+          this._ws.close();
+          this._ws = null;
+        }
+        this._remoteStates.clear();
+      }
+
+      _send(data) {
+        if (this._ws?.readyState === WebSocket.OPEN) {
+          this._ws.send(JSON.stringify(data));
+        }
+      }
+
+      _broadcastState() {
+        this._send({ type: 'awareness', clientID: this.userId, state: this.state, documentId: this.documentId });
+      }
+
+      _startHeartbeat() {
+        this._heartbeatTimer = setInterval(() => this._broadcastState(), 30000);
+      }
+
+      updateCursor(pos) {
+        this.state.selection = { anchor: pos };
+        this._broadcastState();
+        this._emit('change', this.getStates());
+      }
+
+      setTyping(typing) {
+        this.state.typing = typing;
+        this._broadcastState();
+        this._emit('change', this.getStates());
+      }
+
+      setName(name) {
+        this.state.user.name = name;
+        this._broadcastState();
+        this._emit('change', this.getStates());
+      }
+
+      setColor(color) {
+        this.state.user.color = color;
+        this._broadcastState();
+        this._emit('change', this.getStates());
+      }
+
+      getStates() {
+        const states = new Map();
+        states.set(this.userId, this.state);
+        this._remoteStates.forEach((s, id) => states.set(id, s));
+        return states;
+      }
+
+      on(event, cb) {
+        if (!this._listeners.has(event)) this._listeners.set(event, new Set());
+        this._listeners.get(event).add(cb);
+      }
+
+      off(event, cb) {
+        this._listeners.get(event)?.delete(cb);
+      }
+
+      _emit(event, data) {
+        this._listeners.get(event)?.forEach(cb => cb(data));
+      }
+    }
+
+    // DOM elements
+    const connectBtn = document.getElementById('connect-btn');
+    const disconnectBtn = document.getElementById('disconnect-btn');
+    const statusEl = document.getElementById('connection-status');
+    const nameInput = document.getElementById('name-input');
+    const colorInput = document.getElementById('color-input');
+    const userList = document.getElementById('user-list');
+    const userCount = document.getElementById('user-count');
+    const typingIndicator = document.getElementById('typing-indicator');
+    const editor = document.getElementById('editor');
+    const cursorPos = document.getElementById('cursor-pos');
+    const eventLog = document.getElementById('event-log');
+
+    // Server URL - change if running on different port
+    const serverUrl = 'ws://localhost:1235';
+
+    // Create client
+    const client = new AwarenessClient(serverUrl, {
+      name: nameInput.value,
+      color: colorInput.value
+    });
+
+    // Logging
+    function log(type, message) {
+      const time = new Date().toLocaleTimeString();
+      const div = document.createElement('div');
+      div.className = 'event';
+      div.innerHTML = `<span class="time">[${time}]</span> <span class="type">${type}</span>: ${message}`;
+      eventLog.appendChild(div);
+      eventLog.scrollTop = eventLog.scrollHeight;
+    }
+
+    // Event handlers
+    client.on('connected', () => {
+      statusEl.textContent = 'Connected';
+      statusEl.className = 'status connected';
+      connectBtn.disabled = true;
+      disconnectBtn.disabled = false;
+      log('CONNECTED', serverUrl);
+    });
+
+    client.on('disconnected', () => {
+      statusEl.textContent = 'Disconnected';
+      statusEl.className = 'status disconnected';
+      connectBtn.disabled = false;
+      disconnectBtn.disabled = true;
+      log('DISCONNECTED', '');
+    });
+
+    client.on('error', (e) => {
+      log('ERROR', e.message || 'Connection error');
+    });
+
+    client.on('cursor', (data) => {
+      log('CURSOR', `${data.user?.name || 'Unknown'} at pos ${data.selection?.anchor || '?'}`);
+    });
+
+    client.on('change', (states) => {
+      // Update user list
+      userList.innerHTML = '';
+      let count = 0;
+      states.forEach((state, id) => {
+        if (state.user) {
+          count++;
+          const span = document.createElement('span');
+          span.className = 'user';
+          span.textContent = `${state.user.name} (${id.slice(-6)})`;
+          span.style.backgroundColor = state.user.color;
+          userList.appendChild(span);
+        }
+      });
+      userCount.textContent = count;
+
+      // Update typing indicator
+      const typing = [];
+      states.forEach((state, id) => {
+        if (id !== client.userId && state.user?.name && state.typing) {
+          typing.push(`${state.user.name} is typing...`);
+        }
+      });
+      typingIndicator.textContent = typing.join(', ');
+    });
+
+    // UI controls
+    connectBtn.addEventListener('click', () => client.connect());
+    disconnectBtn.addEventListener('click', () => client.disconnect());
+
+    nameInput.addEventListener('input', () => client.setName(nameInput.value));
+    colorInput.addEventListener('input', () => client.setColor(colorInput.value));
+
+    // Editor tracking
+    let typingTimeout;
+    editor.addEventListener('input', () => {
+      client.setTyping(true);
+      clearTimeout(typingTimeout);
+      typingTimeout = setTimeout(() => client.setTyping(false), 1500);
+    });
+
+    editor.addEventListener('click', () => {
+      cursorPos.textContent = editor.selectionStart;
+      client.updateCursor(editor.selectionStart);
+    });
+
+    editor.addEventListener('keyup', () => {
+      cursorPos.textContent = editor.selectionStart;
+      client.updateCursor(editor.selectionStart);
+    });
+
+    log('READY', 'Click Connect to start');
+  </script>
+</body>
+</html>

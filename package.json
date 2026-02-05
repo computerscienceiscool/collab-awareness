@@ -1,0 +1,50 @@
+{
+  "name": "@collab-editor/awareness",
+  "version": "1.0.0",
+  "description": "Real-time cursor and presence synchronization for collaborative editing",
+  "type": "module",
+  "main": "client/browser.js",
+  "exports": {
+    ".": "./client/browser.js",
+    "./server": "./server/index.js",
+    "./node": "./client/node.js"
+  },
+  "bin": {
+    "awareness-server": "./server/index.js"
+  },
+  "scripts": {
+    "start": "node server/index.js"
+  },
+  "keywords": [
+    "collaboration",
+    "cursors",
+    "presence",
+    "codemirror",
+    "websocket",
+    "real-time"
+  ],
+  "author": "JJ",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.18.3"
+  },
+  "peerDependencies": {
+    "@codemirror/view": "^6.0.0",
+    "@codemirror/state": "^6.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@codemirror/view": {
+      "optional": true
+    },
+    "@codemirror/state": {
+      "optional": true
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jj/collab-awareness"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
