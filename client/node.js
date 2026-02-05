@@ -316,11 +316,6 @@ export class AwarenessClientNode {
 
   _handleMessage(data) {
     if (data.type === 'awareness' && data.clientID !== this.userId) {
-      // Only accept messages for our document
-      if (data.documentId && data.documentId !== this.documentId) {
-        return;
-      }
-
       this._remoteStates.set(data.clientID, data.state);
       this._lastSeen.set(data.clientID, Date.now());
 
