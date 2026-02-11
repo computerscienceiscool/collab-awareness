@@ -23,7 +23,6 @@
     "websocket",
     "real-time"
   ],
-  "author": "JJ",
   "license": "MIT",
   "dependencies": {
     "ws": "^8.18.3"

@@ -303,7 +303,7 @@ npx serve examples
 This package is used by:
 
 - [collab-editor](https://github.com/computerscienceiscool/collab-editor) - Browser-based collaborative text editor
-- [vimbeam](https://github.com/computerscienceiscool/vimbeam) - Neovim plugin for collaborative editing
+- [viduct](https://github.com/computerscienceiscool/viduct) - Neovim plugin for collaborative editing
 
 Together, these allow real-time collaboration between browser and Neovim users.
 

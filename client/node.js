@@ -10,7 +10,7 @@ import { randomUUID } from 'crypto';
 
 /**
  * Node.js-based awareness client for real-time presence synchronization.
- * Designed for use in Node.js applications like vimbeam.
+ * Designed for use in Node.js applications like viduct.
  *
  * @example
  * import { AwarenessClientNode } from '@collab-editor/awareness/node';
