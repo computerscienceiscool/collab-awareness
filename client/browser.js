@@ -528,6 +528,22 @@ export function remoteCursorPlugin(cmView, cmState, awareness, clientID) {
                   side: -1,
                 }).range(anchor)
               );
+
+              // Draw selection range if head differs from anchor
+              if (typeof selection.head === 'number' && selection.head !== selection.anchor) {
+                const head = Math.max(0, Math.min(selection.head, currentDocLength));
+                const from = Math.min(anchor, head);
+                const to = Math.max(anchor, head);
+                if (from < to) {
+                  const color = user.color || '#000';
+                  decorations.push(
+                    Decoration.mark({
+                      class: 'remote-selection',
+                      attributes: { style: `background: ${color}33` }
+                    }).range(from, to)
+                  );
+                }
+              }
             }
           });
 
