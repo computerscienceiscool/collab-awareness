@@ -309,4 +309,4 @@ Together, these allow real-time collaboration between browser and Neovim users.
 
 ## License
 
-MIT
+GPL-3.0-or-later — see [LICENSE](LICENSE)
